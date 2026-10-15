@@ -13,7 +13,7 @@ Minimal DDS-style publish/subscribe middleware in C++17 over UDP multicast: disc
 - **Two delivery modes.** Best-effort for high-rate telemetry; reliable with NACK-based retransmit and in-order delivery for commands and logs.
 - **Failure is observable.** Lost samples, missed deadlines and vanished peers are reported as events and counters instead of disappearing silently.
 - **Runs without hardware or a network.** An in-memory bus and a record/replay transport let everything be tested deterministically with a virtual clock.
-- **Small and readable.** About 1.5k lines of library code, RAII throughout, no raw `new`/`delete`, builds warning-free with `-Wall -Wextra -Wpedantic -Wshadow -Wconversion`.
+- **Small and readable.** About 2k lines of library code, RAII throughout, no raw `new`/`delete`, builds warning-free with `-Wall -Wextra -Wpedantic -Wshadow -Wconversion`.
 
 ## Demo
 
