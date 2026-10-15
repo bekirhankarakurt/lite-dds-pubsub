@@ -113,7 +113,7 @@ private:
             if (!o.default_value.empty()) os << " (default: " << o.default_value << ")";
             os << '\n';
         }
-        os << "  -h, --help                  show this help\n";
+        os << "  -h, --help" << std::string(18, ' ') << "show this help\n";
     }
 
     std::string program_;
