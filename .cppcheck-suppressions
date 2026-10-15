@@ -1,0 +1,4 @@
+# Loops that read better than the suggested <algorithm> rewrites.
+useStlAlgorithm
+# Static analysis cannot see that the test harness mutates failures() through macros.
+knownConditionTrueFalse:tests/test_main.cpp

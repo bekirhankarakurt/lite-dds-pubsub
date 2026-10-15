@@ -57,7 +57,7 @@ private:
     class Port;
 
     MemoryBus() = default;
-    bool deliver(const Bytes& datagram);
+    void deliver(const Bytes& datagram);
     void detach(const std::shared_ptr<Endpoint>& endpoint);
 
     mutable std::mutex mutex_;

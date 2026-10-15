@@ -1,6 +1,6 @@
 #include "ldds/describe.hpp"
 
-#include <cstdio>
+#include <iomanip>
 #include <sstream>
 
 namespace ldds {
@@ -17,9 +17,9 @@ std::string describe_endpoint(const EndpointInfo& e) {
 }  // namespace
 
 std::string short_id(std::uint64_t participant_id) {
-    char buf[16];
-    std::snprintf(buf, sizeof buf, "%08x", static_cast<unsigned>(participant_id & 0xFFFFFFFFU));
-    return buf;
+    std::ostringstream os;
+    os << std::hex << std::setw(8) << std::setfill('0') << (participant_id & 0xFFFFFFFFU);
+    return os.str();
 }
 
 std::string describe(const Packet& packet) {

@@ -23,13 +23,13 @@ constexpr std::size_t kMaxBatch = 256;
 constexpr std::size_t kMaxNameLength = 255;
 
 struct StoredSample {
-    std::uint64_t seq;
-    std::int64_t timestamp_ns;
+    std::uint64_t seq{0};
+    std::int64_t timestamp_ns{0};
     Payload payload;
 };
 
 struct Pending {
-    std::int64_t timestamp_ns;
+    std::int64_t timestamp_ns{0};
     Payload payload;
 };
 
@@ -40,7 +40,7 @@ struct LocalWriter {
     Qos qos;
     std::uint64_t next_seq{1};
     std::deque<StoredSample> history;
-    TimePoint next_heartbeat{};
+    TimePoint next_heartbeat;
     WriterStats stats;
 };
 
@@ -49,8 +49,8 @@ struct RemoteWriterState {
     std::uint64_t next_seq{0};
     std::uint64_t known_last{0};
     std::map<std::uint64_t, Pending> pending;
-    TimePoint last_rx{};
-    TimePoint next_nack{};
+    TimePoint last_rx;
+    TimePoint next_nack;
     bool deadline_flagged{false};
 };
 
@@ -66,11 +66,11 @@ struct LocalReader {
 
 struct RemoteEntry {
     RemoteParticipant info;
-    TimePoint last_seen{};
+    TimePoint last_seen;
 };
 
 bool compatible(const Qos& writer, const Qos& reader) {
-    return !(reader.reliability == Reliability::Reliable && writer.reliability == Reliability::BestEffort);
+    return reader.reliability != Reliability::Reliable || writer.reliability != Reliability::BestEffort;
 }
 
 std::uint64_t random_id() {
@@ -120,7 +120,7 @@ struct Participant::Impl {
     std::map<std::uint64_t, RemoteEntry> remotes;
     std::shared_ptr<const EventHandler> event_handler;
     std::uint32_t next_endpoint_id{1};
-    TimePoint next_announce{};
+    TimePoint next_announce;
     ParticipantStats stats;
 
     std::thread thread;
@@ -146,11 +146,13 @@ struct Participant::Impl {
         a.lease_ms = static_cast<std::uint32_t>(config.lease.count());
         for (const auto& entry : writers) {
             const LocalWriter& w = entry.second;
-            a.endpoints.push_back(EndpointInfo{EndpointKind::Writer, w.id, w.topic, w.type, w.qos});
+            EndpointInfo info{EndpointKind::Writer, w.id, w.topic, w.type, w.qos};
+            a.endpoints.push_back(std::move(info));
         }
         for (const auto& entry : readers) {
             const LocalReader& r = entry.second;
-            a.endpoints.push_back(EndpointInfo{EndpointKind::Reader, r.id, r.topic, r.type, r.qos});
+            EndpointInfo info{EndpointKind::Reader, r.id, r.topic, r.type, r.qos};
+            a.endpoints.push_back(std::move(info));
         }
         send_packet(Packet{id, std::move(a)});
         next_announce = now + config.announce_period;
@@ -158,7 +160,7 @@ struct Participant::Impl {
 
     void emit(Event event, Deferred& out) {
         if (!event_handler) return;
-        out.push_back([h = event_handler, e = std::move(event)] { (*h)(e); });
+        out.emplace_back([h = event_handler, e = std::move(event)] { (*h)(e); });
     }
 
     std::string remote_name(std::uint64_t pid) const {
@@ -166,9 +168,9 @@ struct Participant::Impl {
         return it == remotes.end() ? std::string{} : it->second.info.name;
     }
 
-    void deliver(LocalReader& r, const SampleInfo& info, const Payload& payload, Deferred& out) {
+    static void deliver(LocalReader& r, const SampleInfo& info, const Payload& payload, Deferred& out) {
         ++r.stats.received;
-        out.push_back([h = r.handler, payload, info] { (*h)(*payload, info); });
+        out.emplace_back([h = r.handler, payload, info] { (*h)(*payload, info); });
     }
 
     void note_lost(LocalReader& r, std::uint64_t pid, std::uint64_t count, Deferred& out) {
@@ -191,7 +193,7 @@ struct Participant::Impl {
 
     // ---- reception ------------------------------------------------------------
 
-    void drain_pending(LocalReader& r, const WriterKey& key, RemoteWriterState& st, Deferred& out) {
+    static void drain_pending(LocalReader& r, const WriterKey& key, RemoteWriterState& st, Deferred& out) {
         while (!st.pending.empty() && st.pending.begin()->first == st.next_seq) {
             auto node = st.pending.extract(st.pending.begin());
             deliver(r, SampleInfo{key.first, key.second, node.key(), node.mapped().timestamp_ns},
@@ -391,7 +393,7 @@ struct Participant::Impl {
             }
             run_timers(now, out);
         }
-        for (auto& f : out) f();
+        for (const auto& f : out) f();
         return processed;
     }
 
@@ -423,7 +425,7 @@ struct Participant::Impl {
                 send_packet(Packet{id, Data{w.id, seq, ts, reliable, w.topic, w.type, *payload}});
             }
         }
-        for (auto& f : out) f();
+        for (const auto& f : out) f();
         return seq;
     }
 
@@ -537,10 +539,10 @@ std::uint32_t Participant::add_writer(const std::string& topic, const std::strin
     w.topic = topic;
     w.type = type_name;
     w.qos = qos;
-    const std::uint32_t id = w.id;
-    impl_->writers.emplace(id, std::move(w));
+    const std::uint32_t writer_id = w.id;
+    impl_->writers.emplace(writer_id, std::move(w));
     impl_->send_announce(impl_->clock->now());
-    return id;
+    return writer_id;
 }
 
 void Participant::remove_writer(std::uint32_t writer_id) noexcept {
@@ -563,10 +565,10 @@ std::uint32_t Participant::add_reader(const std::string& topic, const std::strin
     r.type = type_name;
     r.qos = qos;
     r.handler = std::make_shared<const RawHandler>(std::move(handler));
-    const std::uint32_t id = r.id;
-    impl_->readers.emplace(id, std::move(r));
+    const std::uint32_t reader_id = r.id;
+    impl_->readers.emplace(reader_id, std::move(r));
     impl_->send_announce(impl_->clock->now());
-    return id;
+    return reader_id;
 }
 
 void Participant::remove_reader(std::uint32_t reader_id) noexcept {

@@ -68,7 +68,7 @@ public:
         membership.imr_interface = iface;
         set_option(fd_.get(), IPPROTO_IP, IP_ADD_MEMBERSHIP, membership, "IP_ADD_MEMBERSHIP");
         set_option(fd_.get(), IPPROTO_IP, IP_MULTICAST_IF, iface, "IP_MULTICAST_IF");
-        const unsigned char ttl = static_cast<unsigned char>(cfg.ttl);
+        const auto ttl = static_cast<unsigned char>(cfg.ttl);
         set_option(fd_.get(), IPPROTO_IP, IP_MULTICAST_TTL, ttl, "IP_MULTICAST_TTL");
         const unsigned char loop = 1;
         set_option(fd_.get(), IPPROTO_IP, IP_MULTICAST_LOOP, loop, "IP_MULTICAST_LOOP");

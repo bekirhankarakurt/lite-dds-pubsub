@@ -32,9 +32,13 @@ struct Serializer<T, std::enable_if_t<std::is_arithmetic_v<T>>> {
         if constexpr (std::is_same_v<T, bool>) {
             return "bool";
         } else {
-            std::string n = std::is_floating_point_v<T> ? "f" : (std::is_signed_v<T> ? "i" : "u");
-            n += std::to_string(sizeof(T) * 8);
-            return n;
+            const char* prefix = "u";
+            if constexpr (std::is_floating_point_v<T>) {
+                prefix = "f";
+            } else if constexpr (std::is_signed_v<T>) {
+                prefix = "i";
+            }
+            return prefix + std::to_string(sizeof(T) * 8);
         }
     }
 

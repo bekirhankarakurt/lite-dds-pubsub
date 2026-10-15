@@ -57,8 +57,8 @@ private:
 
 template <class T>
 struct Sample {
-    T value;
-    SampleInfo info;
+    T value{};
+    SampleInfo info{};
 };
 
 /// Typed reader endpoint. With a handler, samples are pushed to it; without one
@@ -158,17 +158,17 @@ private:
 
 template <class T>
 Publisher<T> Participant::create_publisher(const std::string& topic, Qos qos) {
-    const std::uint32_t id = add_writer(topic, Serializer<T>::type_name(), qos);
-    return Publisher<T>(this, id, topic);
+    const std::uint32_t writer_id = add_writer(topic, Serializer<T>::type_name(), qos);
+    return Publisher<T>(this, writer_id, topic);
 }
 
 template <class T>
 Subscriber<T> Participant::create_subscriber(const std::string& topic, Qos qos,
                                              std::function<void(const T&, const SampleInfo&)> handler) {
     auto state = std::make_shared<typename Subscriber<T>::State>(qos.history_depth, std::move(handler));
-    const std::uint32_t id = add_reader(topic, Serializer<T>::type_name(), qos,
+    const std::uint32_t reader_id = add_reader(topic, Serializer<T>::type_name(), qos,
                                         [state](const Bytes& bytes, const SampleInfo& info) { state->on_raw(bytes, info); });
-    return Subscriber<T>(this, id, topic, std::move(state));
+    return Subscriber<T>(this, reader_id, topic, std::move(state));
 }
 
 }  // namespace ldds
