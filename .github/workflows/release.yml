@@ -1,0 +1,62 @@
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build ${{ matrix.target }}
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      matrix:
+        include:
+          - target: linux-x86_64
+            runner: ubuntu-latest
+          - target: linux-aarch64
+            runner: ubuntu-24.04-arm
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build and test
+        run: |
+          cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DLDDS_WERROR=ON
+          cmake --build build -j
+          ctest --test-dir build --output-on-failure
+      - name: Package
+        run: |
+          name="lite-dds-pubsub-${GITHUB_REF_NAME}-${{ matrix.target }}"
+          mkdir -p "dist/${name}/bin"
+          cp build/bin/{hello_pubsub,sensor_publisher,logger_subscriber,dds_spy,lossy_link_demo,ldds_bench} "dist/${name}/bin/"
+          cp README.md LICENSE CHANGELOG.md "dist/${name}/"
+          tar -C dist -czf "${name}.tar.gz" "${name}"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.target }}
+          path: "*.tar.gz"
+
+  release:
+    name: Publish release
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
+      - name: Checksums and notes
+        run: |
+          (cd artifacts && sha256sum *.tar.gz > SHA256SUMS && cat SHA256SUMS)
+          version="${GITHUB_REF_NAME#v}"
+          awk -v v="$version" '$0 ~ "^## \\[" v "\\]" {found=1; next} /^## \[/ {found=0} found' CHANGELOG.md > notes.md
+          test -s notes.md
+          cat notes.md
+      - uses: softprops/action-gh-release@v2
+        with:
+          body_path: notes.md
+          files: |
+            artifacts/*.tar.gz
+            artifacts/SHA256SUMS
