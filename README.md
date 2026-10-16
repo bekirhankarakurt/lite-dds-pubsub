@@ -3,9 +3,16 @@
 Minimal DDS-style publish/subscribe middleware in C++17 over UDP multicast: discovery, typed topics, and QoS (reliable delivery, history, deadline, liveliness) with no dependencies.
 
 [![CI](https://github.com/bekirhankarakurt/lite-dds-pubsub/actions/workflows/ci.yml/badge.svg)](https://github.com/bekirhankarakurt/lite-dds-pubsub/actions/workflows/ci.yml)
+[![CodeQL](https://github.com/bekirhankarakurt/lite-dds-pubsub/actions/workflows/codeql.yml/badge.svg)](https://github.com/bekirhankarakurt/lite-dds-pubsub/actions/workflows/codeql.yml)
+[![Coverage](https://img.shields.io/endpoint?url=https://bekirhankarakurt.github.io/lite-dds-pubsub/coverage-badge.json)](https://bekirhankarakurt.github.io/lite-dds-pubsub/coverage/)
+[![Release](https://img.shields.io/github/v/release/bekirhankarakurt/lite-dds-pubsub)](https://github.com/bekirhankarakurt/lite-dds-pubsub/releases)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![C++17](https://img.shields.io/badge/C%2B%2B-17-00599C.svg)](https://en.cppreference.com/w/cpp/17)
 [![Platform](https://img.shields.io/badge/platform-Linux-lightgrey.svg)](#requirements)
+
+![Demo: logger and sensor publisher, then reliable vs best-effort on a lossy link](docs/demo.gif)
+
+[Documentation](https://bekirhankarakurt.github.io/lite-dds-pubsub/) (API reference and coverage report) | [Changelog](CHANGELOG.md) | [Releases](https://github.com/bekirhankarakurt/lite-dds-pubsub/releases)
 
 ## Why / what
 
@@ -229,7 +236,7 @@ ctest --test-dir build --output-on-failure                       # 8 test progra
 cmake -S . -B build-asan -DLDDS_SANITIZE=ON -DCMAKE_BUILD_TYPE=Debug && cmake --build build-asan -j && ctest --test-dir build-asan
 ```
 
-The harness is a 90-line header (`tests/check.hpp`). Tests cover the byte codec, every truncation of a packet, discovery and lease expiry, retransmit after burst and tail loss, unrecoverable gaps, duplicates, deadlines, record/replay and real UDP multicast. Protocol timing runs on a virtual clock and the in-memory bus, so the suite is fast and deterministic. The UDP tests skip (CTest status "skipped") when multicast sockets cannot be created. CI runs GCC, Clang and an ASan/UBSan job.
+The harness is a 90-line header (`tests/check.hpp`). Tests cover the byte codec, every truncation of a packet, discovery and lease expiry, retransmit after burst and tail loss, unrecoverable gaps, duplicates, deadlines, record/replay and real UDP multicast. Protocol timing runs on a virtual clock and the in-memory bus, so the suite is fast and deterministic. The UDP tests skip (CTest status "skipped") when multicast sockets cannot be created. CI runs GCC, Clang, an ASan/UBSan job, clang-tidy (`.clang-tidy`), cppcheck and CodeQL; line coverage is published with the [documentation](https://bekirhankarakurt.github.io/lite-dds-pubsub/coverage/).
 
 ## Troubleshooting / FAQ
 
@@ -267,7 +274,13 @@ apps/                hello_pubsub, sensor_publisher, logger_subscriber, dds_spy,
 apps/common/         argument parser, demo message type, helpers
 bench/               ldds_bench
 tests/               check.hpp harness + 8 test programs
-.github/workflows/   CI: GCC, Clang, ASan/UBSan
+docs/                demo.tape (vhs script) and demo.gif
+Doxyfile             API documentation config (published to GitHub Pages)
+.clang-tidy          static analysis profile
+.cppcheck-suppressions
+CHANGELOG.md  CONTRIBUTING.md  SECURITY.md
+.github/workflows/   ci (GCC, Clang, ASan/UBSan, static analysis), codeql, pages (docs + coverage), release
+.github/             issue forms, PR template, dependabot (actions, weekly)
 ```
 
 ## Roadmap
@@ -279,6 +292,7 @@ tests/               check.hpp harness + 8 test programs
 - [x] Local loopback shortcut
 - [x] Record/replay and in-memory simulation transport
 - [x] Sensor publisher, logger subscriber, spy tool, benchmark
+- [x] CI: sanitizers, clang-tidy, cppcheck, CodeQL, coverage, API docs, tagged releases
 - [ ] Compact numeric topic ids to shrink per-sample overhead
 - [ ] Unicast repairs to the requesting reader
 - [ ] Durable (late-joiner) history for reliable topics
