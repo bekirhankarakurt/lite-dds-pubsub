@@ -39,3 +39,23 @@ jobs:
         run: cmake --build build -j
       - name: Test
         run: ctest --test-dir build --output-on-failure
+
+  static-analysis:
+    name: clang-tidy + cppcheck
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y clang-tidy
+          python3 -m pip install cppcheck==1.5.3
+      - name: Configure
+        run: cmake -S . -B build -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+      - name: clang-tidy
+        run: clang-tidy -p build $(git ls-files 'src/*.cpp' 'apps/*.cpp' 'bench/*.cpp' 'tests/*.cpp')
+      - name: cppcheck
+        run: |
+          cppcheck --enable=warning,style,performance,portability --error-exitcode=1 --inline-suppr \
+            --suppressions-list=.cppcheck-suppressions --suppress=missingIncludeSystem \
+            -I include --std=c++17 --quiet src apps bench tests
