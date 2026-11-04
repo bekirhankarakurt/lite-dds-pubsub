@@ -1,0 +1,2 @@
+add_executable(ldds_bench ldds_bench.cpp)
+target_link_libraries(ldds_bench PRIVATE ldds_app_common)
