@@ -1,0 +1,105 @@
+name: Docs and coverage
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pages-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  coverage:
+    name: Coverage
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install gcovr
+        run: python3 -m pip install gcovr
+      - name: Build with coverage
+        run: |
+          cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug -DCMAKE_CXX_FLAGS="--coverage -O0" \
+            -DLDDS_BUILD_APPS=OFF -DLDDS_BUILD_BENCH=OFF
+          cmake --build build -j
+      - name: Test
+        run: ctest --test-dir build --output-on-failure
+      - name: Report
+        run: |
+          mkdir -p site/coverage
+          gcovr --root . --filter 'src/' --filter 'include/' --exclude-throw-branches build \
+            --print-summary --json-summary site/summary.json --html-details site/coverage/index.html
+          python3 - <<'PY'
+          import json
+          pct = json.load(open("site/summary.json"))["line_percent"]
+          color = "brightgreen" if pct >= 90 else "green" if pct >= 80 else "yellow" if pct >= 60 else "red"
+          badge = {"schemaVersion": 1, "label": "coverage", "message": f"{pct:.0f}%", "color": color}
+          json.dump(badge, open("site/coverage-badge.json", "w"))
+          print(badge)
+          PY
+          rm site/summary.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: coverage-site
+          path: site
+
+  docs:
+    name: API docs
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Doxygen
+        run: sudo apt-get update && sudo apt-get install -y doxygen
+      - name: Build
+        run: |
+          mkdir -p build-docs
+          doxygen Doxyfile
+          mkdir -p site
+          mv build-docs/html site/api
+      - uses: actions/upload-artifact@v4
+        with:
+          name: docs-site
+          path: site
+
+  deploy:
+    name: Deploy to GitHub Pages
+    if: github.event_name != 'pull_request'
+    needs: [coverage, docs]
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: site
+          merge-multiple: true
+      - name: Landing page
+        run: |
+          cat > site/index.html <<'HTML'
+          <!doctype html>
+          <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1">
+          <title>lite-dds-pubsub</title>
+          <style>body{font:16px/1.5 system-ui,sans-serif;max-width:40rem;margin:3rem auto;padding:0 1rem}</style>
+          <h1>lite-dds-pubsub</h1>
+          <p>Minimal DDS-style publish/subscribe middleware in C++17 over UDP multicast.</p>
+          <ul>
+            <li><a href="api/">API documentation</a></li>
+            <li><a href="coverage/">Test coverage report</a></li>
+            <li><a href="https://github.com/bekirhankarakurt/lite-dds-pubsub">Source on GitHub</a></li>
+          </ul>
+          HTML
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+      - id: deployment
+        uses: actions/deploy-pages@v4
