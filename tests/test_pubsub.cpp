@@ -173,6 +173,5 @@ TEST(background_thread_delivers_samples) {
     }
     a.stop();
     b.stop();
-    REQUIRE(got.has_value());
-    CHECK_EQ(got->value.id, 1);
+    CHECK_EQ(got ? got->value.id : -1, 1);
 }

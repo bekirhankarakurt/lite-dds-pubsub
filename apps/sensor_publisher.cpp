@@ -60,11 +60,11 @@ int main(int argc, char** argv) {
         const auto wait_until = Clock::now() + std::chrono::duration_cast<Clock::duration>(
                                                    std::chrono::duration<double>(args.real("wait")));
         std::cout << "participant " << ldds::short_id(participant.id()) << " \"" << cfg.name << "\" publishing "
-                  << pub.topic() << " (" << ldds::to_string(qos.reliability) << ", " << rate << " Hz)" << std::endl;
+                  << pub.topic() << " (" << ldds::to_string(qos.reliability) << ", " << rate << " Hz)" << '\n' << std::flush;
         while (pub.matched_subscribers() == 0 && Clock::now() < wait_until && !app::stop_requested()) {
             participant.spin_once(std::chrono::milliseconds{10});
         }
-        std::cout << "subscribers matched: " << pub.matched_subscribers() << std::endl;
+        std::cout << "subscribers matched: " << pub.matched_subscribers() << '\n' << std::flush;
 
         const std::int64_t limit = args.integer("count");
         const auto period = std::chrono::duration_cast<Clock::duration>(std::chrono::duration<double>(1.0 / rate));
@@ -82,7 +82,7 @@ int main(int argc, char** argv) {
         const auto linger = Clock::now() + std::chrono::milliseconds{300};
         while (Clock::now() < linger && !app::stop_requested()) participant.spin_once(std::chrono::milliseconds{10});
         std::cout << "published " << pub.stats().published << " samples, retransmitted " << pub.stats().retransmitted
-                  << std::endl;
+                  << '\n' << std::flush;
     } catch (const std::exception& e) {
         std::cerr << "sensor_publisher: " << e.what() << '\n';
         return 1;

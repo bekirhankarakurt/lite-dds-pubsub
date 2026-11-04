@@ -18,7 +18,10 @@ public:
 
     ~Port() override { bus_->detach(endpoint_); }
 
-    bool send(const Bytes& datagram) override { return bus_->deliver(datagram); }
+    bool send(const Bytes& datagram) override {
+        bus_->deliver(datagram);
+        return true;
+    }
 
     std::optional<Bytes> receive(std::chrono::milliseconds timeout) override {
         std::unique_lock<std::mutex> lock(endpoint_->mutex);
@@ -62,12 +65,12 @@ std::uint64_t MemoryBus::datagrams_dropped() const {
     return dropped_;
 }
 
-bool MemoryBus::deliver(const Bytes& datagram) {
+void MemoryBus::deliver(const Bytes& datagram) {
     std::lock_guard<std::mutex> lock(mutex_);
     ++sent_;
     if (filter_ && filter_(datagram)) {
         ++dropped_;
-        return true;
+        return;
     }
     for (const auto& endpoint : endpoints_) {
         {
@@ -76,7 +79,6 @@ bool MemoryBus::deliver(const Bytes& datagram) {
         }
         endpoint->cv.notify_one();
     }
-    return true;
 }
 
 void MemoryBus::detach(const std::shared_ptr<Endpoint>& endpoint) {

@@ -91,7 +91,7 @@ int main(int argc, char** argv) {
                           << ldds::short_id(info.participant_id) << '\n';
             });
         std::cout << "participant " << ldds::short_id(participant.id()) << " \"" << cfg.name << "\" listening on "
-                  << sub.topic() << " (" << ldds::to_string(qos.reliability) << ")" << std::endl;
+                  << sub.topic() << " (" << ldds::to_string(qos.reliability) << ")" << '\n' << std::flush;
 
         using Clock = std::chrono::steady_clock;
         const auto start = Clock::now();
@@ -109,7 +109,7 @@ int main(int argc, char** argv) {
 
         const ldds::ReaderStats st = sub.stats();
         std::cout << "received=" << st.received << " lost=" << st.lost << " duplicates=" << st.duplicates
-                  << " deadline_missed=" << st.deadline_missed << " nacks_sent=" << st.nacks_sent << std::endl;
+                  << " deadline_missed=" << st.deadline_missed << " nacks_sent=" << st.nacks_sent << '\n' << std::flush;
     } catch (const std::exception& e) {
         std::cerr << "logger_subscriber: " << e.what() << '\n';
         return 1;

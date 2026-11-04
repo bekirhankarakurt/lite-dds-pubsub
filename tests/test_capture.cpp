@@ -11,7 +11,7 @@ namespace {
 struct TempFile {
     explicit TempFile(const std::string& name)
         : path((std::filesystem::temp_directory_path() / ("ldds_test_" + name)).string()) {}
-    ~TempFile() { std::remove(path.c_str()); }
+    ~TempFile() { (void)std::remove(path.c_str()); }
     std::string path;
 };
 
@@ -40,8 +40,8 @@ TEST(invalid_capture_files_are_rejected) {
     {
         std::FILE* f = std::fopen(file.path.c_str(), "wb");
         REQUIRE(f != nullptr);
-        std::fputs("not a capture", f);
-        std::fclose(f);
+        (void)std::fputs("not a capture", f);
+        (void)std::fclose(f);
     }
     CHECK_THROWS(CaptureReader(file.path), DecodeError);
     CHECK_THROWS(CaptureReader(file.path + ".missing"), std::runtime_error);
@@ -79,7 +79,7 @@ TEST(recorded_session_replays_into_a_subscriber) {
     }
 
     auto replay = std::make_unique<ReplayTransport>(file.path);
-    ReplayTransport* feed = replay.get();
+    const ReplayTransport* feed = replay.get();
     Participant offline(std::move(replay));
     auto sub = offline.create_subscriber<Pose>("pose");
     while (!feed->exhausted()) offline.spin_once(milliseconds{0});

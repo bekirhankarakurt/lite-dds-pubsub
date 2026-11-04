@@ -6,7 +6,7 @@
 #include <algorithm>
 #include <atomic>
 #include <chrono>
-#include <cstdio>
+#include <iomanip>
 #include <iostream>
 #include <thread>
 
@@ -25,7 +25,7 @@ std::int64_t now_ns() {
 struct Rig {
     std::unique_ptr<ldds::Participant> tx;
     std::unique_ptr<ldds::Participant> rx;  // null for the loopback path (rx == tx)
-    ldds::Participant& sub_side() { return rx ? *rx : *tx; }
+    ldds::Participant& sub_side() const { return rx ? *rx : *tx; }
 };
 
 double percentile(const std::vector<double>& sorted, double p) {
@@ -97,11 +97,12 @@ int main(int argc, char** argv) {
         }
         std::sort(latencies_us.begin(), latencies_us.end());
 
-        std::printf("path=%s size=%zu B qos=%s\n", path.c_str(), size, ldds::to_string(qos.reliability));
+        std::cout << std::fixed << std::setprecision(1);
+        std::cout << "path=" << path << " size=" << size << " B qos=" << ldds::to_string(qos.reliability) << '\n';
         if (!latencies_us.empty()) {
-            std::printf("latency     n=%zu  min=%.1f  p50=%.1f  p99=%.1f  max=%.1f us  (timeouts=%llu)\n",
-                        latencies_us.size(), latencies_us.front(), percentile(latencies_us, 0.50),
-                        percentile(latencies_us, 0.99), latencies_us.back(), static_cast<unsigned long long>(timeouts));
+            std::cout << "latency     n=" << latencies_us.size() << "  min=" << latencies_us.front()
+                      << "  p50=" << percentile(latencies_us, 0.50) << "  p99=" << percentile(latencies_us, 0.99)
+                      << "  max=" << latencies_us.back() << " us  (timeouts=" << timeouts << ")\n";
         }
 
         const std::int64_t burst = args.integer("throughput-samples");
@@ -120,11 +121,11 @@ int main(int argc, char** argv) {
         }
         const double secs = std::chrono::duration<double>(last_progress - t0).count();
         const std::uint64_t got = received - base;
-        std::printf("throughput  sent=%lld  received=%llu (%.1f%%)  %.0f msg/s  %.1f MB/s\n",
-                    static_cast<long long>(burst), static_cast<unsigned long long>(got),
-                    100.0 * static_cast<double>(got) / static_cast<double>(burst),
-                    secs > 0 ? static_cast<double>(got) / secs : 0.0,
-                    secs > 0 ? static_cast<double>(got) * static_cast<double>(size) / secs / 1e6 : 0.0);
+        const double msgs_per_s = secs > 0 ? static_cast<double>(got) / secs : 0.0;
+        std::cout << "throughput  sent=" << burst << "  received=" << got << " ("
+                  << 100.0 * static_cast<double>(got) / static_cast<double>(burst) << "%)  " << std::setprecision(0)
+                  << msgs_per_s << " msg/s  " << std::setprecision(1)
+                  << msgs_per_s * static_cast<double>(size) / 1e6 << " MB/s\n";
 
         rig.tx->stop();
         if (rig.rx) rig.rx->stop();

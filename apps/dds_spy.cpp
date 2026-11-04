@@ -89,7 +89,7 @@ int main(int argc, char** argv) {
         std::cout << "-- " << tally.total << " packets";
         for (const auto& entry : tally.by_type) std::cout << ", " << entry.first << '=' << entry.second;
         if (tally.malformed != 0) std::cout << ", MALFORMED=" << tally.malformed;
-        std::cout << std::endl;
+        std::cout << '\n' << std::flush;
     } catch (const std::exception& e) {
         std::cerr << "dds_spy: " << e.what() << '\n';
         return 1;
