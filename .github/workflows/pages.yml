@@ -97,7 +97,7 @@ jobs:
             <li><a href="https://github.com/bekirhankarakurt/lite-dds-pubsub">Source on GitHub</a></li>
           </ul>
           HTML
-      - uses: actions/configure-pages@v5
+      - uses: actions/configure-pages@v6
       - uses: actions/upload-pages-artifact@v3
         with:
           path: site
