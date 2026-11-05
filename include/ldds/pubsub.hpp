@@ -90,7 +90,7 @@ public:
 
     /// Oldest queued sample, if any.
     [[nodiscard]] std::optional<Sample<T>> take() {
-        std::lock_guard<std::mutex> lock(state_->mutex);
+        std::scoped_lock lock(state_->mutex);
         if (state_->queue.empty()) return std::nullopt;
         Sample<T> s = std::move(state_->queue.front());
         state_->queue.pop_front();
@@ -98,7 +98,7 @@ public:
     }
 
     [[nodiscard]] std::vector<Sample<T>> take_all() {
-        std::lock_guard<std::mutex> lock(state_->mutex);
+        std::scoped_lock lock(state_->mutex);
         std::vector<Sample<T>> out(std::make_move_iterator(state_->queue.begin()),
                                    std::make_move_iterator(state_->queue.end()));
         state_->queue.clear();
@@ -130,7 +130,7 @@ private:
                 handler(*value, info);
                 return;
             }
-            std::lock_guard<std::mutex> lock(mutex);
+            std::scoped_lock lock(mutex);
             queue.push_back(Sample<T>{std::move(*value), info});
             while (queue.size() > depth) queue.pop_front();
         }

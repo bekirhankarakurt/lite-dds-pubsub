@@ -21,7 +21,7 @@ app::ImuSample simulate(std::uint32_t counter, double rate_hz) {
     s.time_s = t;
     s.ax = static_cast<float>(0.35 * std::sin(kTwoPi * 0.8 * t));
     s.ay = static_cast<float>(0.20 * std::cos(kTwoPi * 0.5 * t));
-    s.az = static_cast<float>(9.80665 + 0.05 * std::sin(kTwoPi * 3.0 * t));
+    s.az = static_cast<float>(9.80665 + (0.05 * std::sin(kTwoPi * 3.0 * t)));
     s.gx = static_cast<float>(0.10 * std::sin(kTwoPi * 0.25 * t));
     s.gy = static_cast<float>(0.05 * std::cos(kTwoPi * 0.40 * t));
     s.gz = static_cast<float>(0.02 * std::sin(kTwoPi * 1.00 * t));

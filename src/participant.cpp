@@ -378,7 +378,7 @@ struct Participant::Impl {
         std::size_t processed = 0;
         Deferred out;
         {
-            std::lock_guard<std::mutex> lock(mutex);
+            std::scoped_lock lock(mutex);
             const TimePoint now = clock->now();
             while (datagram) {
                 ++processed;
@@ -402,7 +402,7 @@ struct Participant::Impl {
         Deferred out;
         std::uint64_t seq = 0;
         {
-            std::lock_guard<std::mutex> lock(mutex);
+            std::scoped_lock lock(mutex);
             const auto it = writers.find(writer_id);
             if (it == writers.end()) throw std::invalid_argument("unknown writer");
             LocalWriter& w = it->second;
@@ -430,7 +430,7 @@ struct Participant::Impl {
     }
 
     std::size_t matched_readers(std::uint32_t writer_id) const {
-        std::lock_guard<std::mutex> lock(mutex);
+        std::scoped_lock lock(mutex);
         const LocalWriter& w = find_writer(writer_id);
         std::size_t n = 0;
         for (const auto& entry : readers) {
@@ -449,7 +449,7 @@ struct Participant::Impl {
     }
 
     std::size_t matched_writers(std::uint32_t reader_id) const {
-        std::lock_guard<std::mutex> lock(mutex);
+        std::scoped_lock lock(mutex);
         const LocalReader& r = find_reader(reader_id);
         std::size_t n = 0;
         for (const auto& entry : writers) {
@@ -482,18 +482,18 @@ struct Participant::Impl {
 
 Participant::Participant(std::unique_ptr<Transport> transport, Config config)
     : impl_(std::make_unique<Impl>(std::move(transport), std::move(config))) {
-    std::lock_guard<std::mutex> lock(impl_->mutex);
+    std::scoped_lock lock(impl_->mutex);
     impl_->send_announce(impl_->clock->now());
 }
 
 Participant::~Participant() {
     stop();
-    std::lock_guard<std::mutex> lock(impl_->mutex);
+    std::scoped_lock lock(impl_->mutex);
     impl_->send_packet(Packet{impl_->id, Bye{}});
 }
 
 void Participant::set_event_handler(EventHandler handler) {
-    std::lock_guard<std::mutex> lock(impl_->mutex);
+    std::scoped_lock lock(impl_->mutex);
     impl_->event_handler = handler ? std::make_shared<const EventHandler>(std::move(handler)) : nullptr;
 }
 
@@ -515,7 +515,7 @@ std::size_t Participant::spin_once(std::chrono::milliseconds timeout) { return i
 std::uint64_t Participant::id() const noexcept { return impl_->id; }
 
 std::vector<RemoteParticipant> Participant::remote_participants() const {
-    std::lock_guard<std::mutex> lock(impl_->mutex);
+    std::scoped_lock lock(impl_->mutex);
     const TimePoint now = impl_->clock->now();
     std::vector<RemoteParticipant> out;
     for (const auto& entry : impl_->remotes) {
@@ -527,13 +527,13 @@ std::vector<RemoteParticipant> Participant::remote_participants() const {
 }
 
 ParticipantStats Participant::stats() const {
-    std::lock_guard<std::mutex> lock(impl_->mutex);
+    std::scoped_lock lock(impl_->mutex);
     return impl_->stats;
 }
 
 std::uint32_t Participant::add_writer(const std::string& topic, const std::string& type_name, Qos qos) {
     validate_endpoint(topic, type_name, qos);
-    std::lock_guard<std::mutex> lock(impl_->mutex);
+    std::scoped_lock lock(impl_->mutex);
     LocalWriter w;
     w.id = impl_->next_endpoint_id++;
     w.topic = topic;
@@ -546,7 +546,7 @@ std::uint32_t Participant::add_writer(const std::string& topic, const std::strin
 }
 
 void Participant::remove_writer(std::uint32_t writer_id) noexcept {
-    std::lock_guard<std::mutex> lock(impl_->mutex);
+    std::scoped_lock lock(impl_->mutex);
     if (impl_->writers.erase(writer_id) != 0) impl_->send_announce(impl_->clock->now());
 }
 
@@ -558,7 +558,7 @@ std::uint32_t Participant::add_reader(const std::string& topic, const std::strin
                                       RawHandler handler) {
     validate_endpoint(topic, type_name, qos);
     if (!handler) throw std::invalid_argument("reader handler must not be empty");
-    std::lock_guard<std::mutex> lock(impl_->mutex);
+    std::scoped_lock lock(impl_->mutex);
     LocalReader r;
     r.id = impl_->next_endpoint_id++;
     r.topic = topic;
@@ -572,7 +572,7 @@ std::uint32_t Participant::add_reader(const std::string& topic, const std::strin
 }
 
 void Participant::remove_reader(std::uint32_t reader_id) noexcept {
-    std::lock_guard<std::mutex> lock(impl_->mutex);
+    std::scoped_lock lock(impl_->mutex);
     if (impl_->readers.erase(reader_id) != 0) impl_->send_announce(impl_->clock->now());
 }
 
@@ -581,12 +581,12 @@ std::size_t Participant::matched_readers(std::uint32_t writer_id) const { return
 std::size_t Participant::matched_writers(std::uint32_t reader_id) const { return impl_->matched_writers(reader_id); }
 
 WriterStats Participant::writer_stats(std::uint32_t writer_id) const {
-    std::lock_guard<std::mutex> lock(impl_->mutex);
+    std::scoped_lock lock(impl_->mutex);
     return impl_->find_writer(writer_id).stats;
 }
 
 ReaderStats Participant::reader_stats(std::uint32_t reader_id) const {
-    std::lock_guard<std::mutex> lock(impl_->mutex);
+    std::scoped_lock lock(impl_->mutex);
     return impl_->find_reader(reader_id).stats;
 }
 

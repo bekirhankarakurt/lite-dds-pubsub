@@ -44,29 +44,29 @@ std::shared_ptr<MemoryBus> MemoryBus::create() { return std::shared_ptr<MemoryBu
 std::unique_ptr<Transport> MemoryBus::connect() {
     auto endpoint = std::make_shared<Endpoint>();
     {
-        std::lock_guard<std::mutex> lock(mutex_);
+        std::scoped_lock lock(mutex_);
         endpoints_.push_back(endpoint);
     }
     return std::make_unique<Port>(shared_from_this(), std::move(endpoint));
 }
 
 void MemoryBus::set_drop_filter(DropFilter filter) {
-    std::lock_guard<std::mutex> lock(mutex_);
+    std::scoped_lock lock(mutex_);
     filter_ = std::move(filter);
 }
 
 std::uint64_t MemoryBus::datagrams_sent() const {
-    std::lock_guard<std::mutex> lock(mutex_);
+    std::scoped_lock lock(mutex_);
     return sent_;
 }
 
 std::uint64_t MemoryBus::datagrams_dropped() const {
-    std::lock_guard<std::mutex> lock(mutex_);
+    std::scoped_lock lock(mutex_);
     return dropped_;
 }
 
 void MemoryBus::deliver(const Bytes& datagram) {
-    std::lock_guard<std::mutex> lock(mutex_);
+    std::scoped_lock lock(mutex_);
     ++sent_;
     if (filter_ && filter_(datagram)) {
         ++dropped_;
@@ -74,7 +74,7 @@ void MemoryBus::deliver(const Bytes& datagram) {
     }
     for (const auto& endpoint : endpoints_) {
         {
-            std::lock_guard<std::mutex> el(endpoint->mutex);
+            std::scoped_lock el(endpoint->mutex);
             endpoint->queue.push_back(datagram);
         }
         endpoint->cv.notify_one();
@@ -82,7 +82,7 @@ void MemoryBus::deliver(const Bytes& datagram) {
 }
 
 void MemoryBus::detach(const std::shared_ptr<Endpoint>& endpoint) {
-    std::lock_guard<std::mutex> lock(mutex_);
+    std::scoped_lock lock(mutex_);
     for (auto it = endpoints_.begin(); it != endpoints_.end(); ++it) {
         if (*it == endpoint) {
             endpoints_.erase(it);
