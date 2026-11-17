@@ -54,7 +54,7 @@ jobs:
           awk -v v="$version" '$0 ~ "^## \\[" v "\\]" {found=1; next} /^## \[/ {found=0} found' CHANGELOG.md > notes.md
           test -s notes.md
           cat notes.md
-      - uses: softprops/action-gh-release@v2
+      - uses: softprops/action-gh-release@v3
         with:
           body_path: notes.md
           files: |
