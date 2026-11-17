@@ -32,7 +32,7 @@ jobs:
           cp build/bin/{hello_pubsub,sensor_publisher,logger_subscriber,dds_spy,lossy_link_demo,ldds_bench} "dist/${name}/bin/"
           cp README.md LICENSE CHANGELOG.md "dist/${name}/"
           tar -C dist -czf "${name}.tar.gz" "${name}"
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: ${{ matrix.target }}
           path: "*.tar.gz"
